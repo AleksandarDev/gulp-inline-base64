@@ -12,8 +12,7 @@ module.exports = function(opts) {
 
     var datauri = function(file, callback) {
         var app_path = opts.baseDir;
-        var reg_exp = /url\([ '"]?(.*?)[ '"]?(|\,(.*?))\)/g;
-        var isStream = file.contents && typeof file.contents.on === 'function' && typeof file.contents.pipe === 'function';
+        var reg_exp = /inlineimg\([ '"]?(.*?)[ '"]?(|\,(.*?))\)/g;
         var isBuffer = file.contents instanceof Buffer;
         if(opts.useRelativePath){
             app_path = file.path.replace(/\/[^/]+$/, '/');
@@ -23,12 +22,10 @@ module.exports = function(opts) {
 
             var matches = [],
                 found,
-                force;
             while (found = reg_exp.exec(str)) {
                 matches.push({
                     'txt': found[0],
                     'url': found[1],
-                    'force': found[2].replace(/(\,|\ )/g, '') == 'true' ? true : false
                 });
             }
 
@@ -36,24 +33,13 @@ module.exports = function(opts) {
                 if (matches[i].url.indexOf('data:image') === -1) { //if find -> image already decoded
                     var filepath = app_path + path.normalize(matches[i].url);
                     if (fs.existsSync(filepath)) {
-                        var size = fs.statSync(filepath).size;
-
-                        // File will not be included because of its size
-                        if (opts.maxSize && size > opts.maxSize && !matches[i].force) {
-                            if (opts.debug) gutil.log('gulp-inline-base64:', gutil.colors.yellow('file is greater than ' + Math.round(size / 1024) + 'kb > ' + Math.round(opts.maxSize / 1024) + 'kb => skip') + gutil.colors.gray(' (' + filepath + ')'));
-                            str = str.replace(matches[i].txt, 'url(' + matches[i].url + ')');
-                        }
-
-                        // Else replace by inline base64 version
-                        else {
-                            var b = fs.readFileSync(filepath);
-                            if (mime.getType) {
-                              str = str.replace(matches[i].txt, 'url(' + ('data:' + mime.getType(filepath) + ';base64,' + b.toString('base64')) + ')');
-                            } else {
-                              str = str.replace(matches[i].txt, 'url(' + ('data:' + mime.lookup(filepath) + ';base64,' + b.toString('base64')) + ')');
-                            }
-                        }
-
+                        var b = fs.readFileSync(filepath);
+                        if (mime.getType) {
+                            str = str.replace(matches[i].txt, 'url(' + ('data:' + mime.getType(filepath) + ';base64,' + b.toString('base64')) + ')');
+                        } else {
+                            str = str.replace(matches[i].txt, 'url(' + ('data:' + mime.lookup(filepath) + ';base64,' + b.toString('base64')) + ')');
+                        }                        
+                        gutil.log('gulp-inline-base64:', gutil.colors.green('process file') + gutil.colors.gray(' (' + filepath + ')'));
                     } else {
                         if (opts.debug) gutil.log('gulp-inline-base64:', gutil.colors.red('file not found => skip') + gutil.colors.gray(' (' + filepath + ')'));
                     }

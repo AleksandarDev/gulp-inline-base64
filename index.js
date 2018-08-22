@@ -21,7 +21,7 @@ module.exports = function(opts) {
             var str = String(file.contents);
 
             var matches = [],
-                found,
+                found;
             while (found = reg_exp.exec(str)) {
                 matches.push({
                     'txt': found[0],
